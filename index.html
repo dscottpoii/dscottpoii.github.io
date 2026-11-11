@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Buoy Board</title>
+<meta name="description" content="Live NOAA buoy readings, tide stations, weather radio channels and marine forecast zones from the Gulf of Maine to the Caribbean.">
+<meta name="theme-color" content="#132430">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root{
+  --bg:#f2f5f6; --panel:#ffffff; --ink:#132430; --muted:#5a6b76; --rule:#d6dfe3;
+  --accent:#a3165f; --accent-soft:#f6e3ed; --chip:#e6edf0; --star:#c98a00;
+  --bar:#132430; --bar-ink:#93a6b1; --bar-on:#ffffff; --warn-bg:#fff4d6; --warn-ink:#6b4a00;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Source Sans 3",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --tabh:62px;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0d171d; --panel:#132029; --ink:#e3ecf0; --muted:#93a6b1; --rule:#24353f;
+  --accent:#ec74ae; --accent-soft:#3a1a2b; --chip:#1b2b35; --star:#f2c14e;
+  --bar:#0a1318; --bar-ink:#7d909b; --bar-on:#ffffff; --warn-bg:#3a2e10; --warn-ink:#f2d58a; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+.wrap{max-width:760px;margin:0 auto;padding-block:16px calc(var(--tabh) + 32px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.screen-h{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--f-display);font-weight:700;font-size:2rem;line-height:1;letter-spacing:.01em;margin:0;text-transform:uppercase}
+.lead{margin:6px 0 0;color:var(--muted);font-size:.95rem}
+.phone{font-family:var(--f-mono);color:var(--ink);white-space:nowrap}
+.btn{font:600 .9rem var(--f-body);border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:focus-visible,.tab:focus-visible,.star:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.notice{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--warn-bg);color:var(--warn-ink);border-radius:10px;padding:10px 12px;margin-top:12px;font-size:.9rem}
+.sticky{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px 10px;border-bottom:1px solid var(--rule);margin-bottom:8px}
+.search{width:100%;font:inherit;padding:9px 12px;border:1px solid var(--rule);border-radius:8px;background:var(--panel);color:var(--ink)}
+.search:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-top:10px;padding-bottom:2px;scrollbar-width:none}
+.chips a{flex:none;font-family:var(--f-display);font-weight:600;font-size:.95rem;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;color:var(--ink);background:var(--chip);padding:5px 10px;border-radius:999px}
+section{margin-top:24px;scroll-margin-top:120px}
+h2{font-family:var(--f-display);font-weight:700;font-size:1.35rem;letter-spacing:.05em;text-transform:uppercase;margin:0 0 2px;display:flex;align-items:baseline;gap:10px}
+h2 .ct{font-family:var(--f-mono);font-size:.75rem;color:var(--muted);letter-spacing:0}
+.sub{color:var(--muted);font-size:.9rem;margin:0 0 8px}
+h3{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;font-weight:600}
+ul.rows{list-style:none;margin:0;padding:0;background:var(--panel);border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+ul.rows>li{display:flex;align-items:stretch}
+ul.rows>li+li{border-top:1px solid var(--rule)}
+.r{flex:1;min-width:0;display:grid;grid-template-columns:5.6rem 1fr;gap:10px;align-items:baseline;padding:10px 4px 10px 12px;text-decoration:none;color:var(--ink);font-variant-numeric:tabular-nums;background:none;border:0;font:inherit;text-align:left;cursor:pointer}
+div.r{cursor:default}
+a.r:hover,button.r:hover,a.r:focus-visible,button.r:focus-visible{background:var(--accent-soft);outline:none}
+.id{font-family:var(--f-mono);font-size:.82rem;color:var(--accent)}
+.nm{min-width:0;font-weight:600}
+.nt{display:block;font-weight:400;color:var(--muted);font-size:.86rem}
+.go{color:var(--muted);font-weight:400}
+.star{flex:none;width:44px;border:0;background:none;color:var(--muted);font-size:1.25rem;cursor:pointer;line-height:1}
+.star[aria-pressed="true"]{color:var(--star)}
+.hint{color:var(--muted);font-size:.92rem;background:var(--panel);border:1px dashed var(--rule);border-radius:10px;padding:14px}
+.empty{color:var(--muted);padding:20px 0}
+/* live cards */
+.cards{display:grid;gap:10px}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:12px 14px;display:grid;gap:8px;text-align:left;font:inherit;color:var(--ink);cursor:pointer;width:100%}
+.card:hover,.card:focus-visible{border-color:var(--accent);outline:none}
+.card-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card-name{font-weight:600;min-width:0}
+.age{font-family:var(--f-mono);font-size:.75rem;color:var(--muted);white-space:nowrap}
+.age.stale{color:var(--warn-ink)}
+.obs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ob{min-width:0}
+.ob b{display:block;font-family:var(--f-display);font-size:1.45rem;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ob span{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.ob small{display:block;font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.nodata{color:var(--muted);font-size:.9rem}
+.other{margin-top:18px}
+/* detail */
+#detail .back{margin-bottom:12px}
+.big{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:14px}
+.big .obs{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.big .ob b{font-size:1.9rem}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabh) + 16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:.9rem;z-index:40}
+/* tabs */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--bar);display:flex;justify-content:center;
+  padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.tabbar-in{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:760px}
+.tab{height:var(--tabh);border:0;background:none;color:var(--bar-ink);font:600 .72rem var(--f-body);letter-spacing:.06em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer}
+.tab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-selected="true"]{color:var(--bar-on)}
+.tab[aria-selected="true"] svg{stroke:#ec74ae}
+footer{margin-top:36px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--rule);padding-top:14px}
+footer a{color:var(--accent)}
+table.ch{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--rule);border-radius:10px;overflow:hidden;font-variant-numeric:tabular-nums}
+table.ch td{padding:8px 12px;border-top:1px solid var(--rule)}
+table.ch tr:first-child td{border-top:0}
+table.ch td:first-child{font-family:var(--f-mono);color:var(--accent);width:5.6rem}
+@media (prefers-reduced-motion:no-preference){.screen{animation:in .18s ease-out}@keyframes in{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- MY STATIONS -->
+  <div class="screen" id="s-mine" hidden>
+    <div class="screen-h"><h1>My Stations</h1><button class="btn" id="refresh" type="button">↻ Refresh</button></div>
+    <p class="lead" id="mine-lead">Live readings for the buoys you pin.</p>
+    <div class="notice" id="offline" hidden><span id="offline-msg">No signal. Showing the last readings saved on this phone.</span><button class="btn" id="retry" type="button">Retry</button></div>
+    <div id="mine-body"></div>
+  </div>
+
+  <!-- STATIONS -->
+  <div class="screen" id="s-stations" hidden>
+    <h1>Stations</h1>
+    <p class="lead">Buoys and forecast zones from the Gulf of Maine to the Caribbean. Dial-A-Buoy: <span class="phone">888-701-8992</span></p>
+    <div class="sticky">
+      <input id="q" class="search" type="search" placeholder="Search station, zone or place (e.g. 44025, Hatteras)" aria-label="Search stations">
+      <div class="chips" id="chips"></div>
+    </div>
+    <div id="list"></div>
+    <p class="empty" id="empty" hidden>Nothing matches that search.</p>
+  </div>
+
+  <!-- TIDES -->
+  <div class="screen" id="s-tides" hidden>
+    <h1>Tides</h1>
+    <p class="lead">NOAA tide stations by leg. Tap one for today's predictions.</p>
+    <div id="tides"></div>
+  </div>
+
+  <!-- RADIO -->
+  <div class="screen" id="s-radio" hidden>
+    <h1>WX Radio</h1>
+    <p class="lead">NOAA Weather Radio transmitters by leg, with VHF weather channel and frequency. Available offline.</p>
+    <div id="radio"></div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="screen" id="s-detail" hidden>
+    <div id="detail"></div>
+  </div>
+
+  <footer>
+    <p>Live readings come from NOAA's National Data Buoy Center and are usually 20 to 60 minutes old. Lists, tide station numbers and weather radio channels work offline.</p>
+    <p>Buoy Board is not affiliated with NOAA or the National Weather Service. Always confirm conditions with official forecasts before getting underway.</p>
+    <p><a href="privacy.html">Privacy policy</a></p>
+  </footer>
+</div>
+
+<nav class="tabbar" aria-label="Sections"><div class="tabbar-in" role="tablist">
+  <button class="tab" role="tab" data-tab="mine" type="button"><svg viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>My Stations</button>
+  <button class="tab" role="tab" data-tab="stations" type="button"><svg viewBox="0 0 24 24"><path d="M9 4h6l2 10H7z"/><path d="M12 1v3"/><path d="M2 18c2.5 0 2.5-1.5 5-1.5S9.5 18 12 18s2.5-1.5 5-1.5S19.5 18 22 18"/><path d="M2 22c2.5 0 2.5-1.5 5-1.5S9.5 22 12 22s2.5-1.5 5-1.5S19.5 22 22 22"/></svg>Stations</button>
+  <button class="tab" role="tab" data-tab="tides" type="button"><svg viewBox="0 0 24 24"><path d="M2 12c3-5 6-5 10 0s7 5 10 0"/><path d="M12 3v4M12 17v4"/></svg>Tides</button>
+  <button class="tab" role="tab" data-tab="radio" type="button"><svg viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="12" rx="2"/><path d="M8 9l9-6"/><circle cx="9" cy="15" r="2"/><path d="M14 13h3M14 17h3"/></svg>WX Radio</button>
+</div></nav>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const B=id=>"https://www.ndbc.noaa.gov/station_page.php?station="+id.toLowerCase();
+const Z=z=>"https://forecast.weather.gov/shmrn.php?mz="+z.toLowerCase();
+const P=id=>"https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id="+id;
+const OFF=c=>"https://forecast.weather.gov/product.php?site=NWS&issuedby="+c+"&product=OFF";
+const DATA=[
+ {id:"core",name:"Core tools",sub:"Start here for any passage.",groups:[["",[
+  ["NDBC","National Data Buoy Center","All buoys and C-MAN stations",'https://www.ndbc.noaa.gov/'],
+  ["MAP","NDBC station map","Tap any buoy for wind, waves, pressure",'https://www.ndbc.noaa.gov/obs.shtml'],
+  ["MOBILE","NDBC mobile","Lightweight pages for use underway",'https://www.ndbc.noaa.gov/mobile/'],
+  ["NWS","NWS marine forecasts","Coastal, offshore and high seas index",'https://www.weather.gov/marine/'],
+  ["POINT","Marine point forecast","Tap any spot on the water",'https://marine.weather.gov/'],
+  ["OPC","Ocean Prediction Center","Surface analyses, wind and wave charts",'https://ocean.weather.gov/'],
+  ["NHC","National Hurricane Center","Tropical outlooks and advisories",'https://www.nhc.noaa.gov/'],
+  ["TIDES","NOAA Tides & Currents","Tide and current predictions",'https://tidesandcurrents.noaa.gov/']]],
+  ["NOAA Weather Radio channels",[
+   ["WX1","162.550 MHz","",null],["WX2","162.400 MHz","",null],["WX3","162.475 MHz","",null],
+   ["WX4","162.425 MHz","",null],["WX5","162.450 MHz","",null],["WX6","162.500 MHz","",null],["WX7","162.525 MHz","",null]]]]},
+ {id:"chesapeake",name:"Chesapeake Bay",sub:"Annapolis, Eastern Shore and down to the capes.",groups:[
+  ["Buoys",[
+   ["TPLM2","Thomas Point Light","Off Annapolis",B("TPLM2")],
+   ["44063","Annapolis (CBIBS)","Mid-bay off the Severn",B("44063")],
+   ["44043","Patapsco (CBIBS)","Upper bay",B("44043")],
+   ["44062","Gooses Reef (CBIBS)","Off the Choptank",B("44062")],
+   ["44058","Stingray Point (CBIBS)","Lower bay, off the Rappahannock",B("44058")],
+   ["CBIBS","Chesapeake Bay buoy system","All bay buoys, water temp, currents",'https://buoybay.noaa.gov/']]],
+  ["Forecast zones",[
+   ["ANZ531","Pooles Island to Sandy Point","",Z("ANZ531")],
+   ["ANZ532","Sandy Point to North Beach","Annapolis waters",Z("ANZ532")],
+   ["ANZ540","Eastern Bay","",Z("ANZ540")],
+   ["ANZ541","Choptank River","Oxford and Cambridge",Z("ANZ541")],
+   ["ANZ533","North Beach to Drum Point","",Z("ANZ533")],
+   ["ANZ534","Drum Point to Smith Point","",Z("ANZ534")],
+   ["ANZ630","Smith Point to Windmill Point","",Z("ANZ630")],
+   ["ANZ631","Windmill Point to New Point Comfort","",Z("ANZ631")],
+   ["ANZ632","New Point Comfort to Little Creek","",Z("ANZ632")],
+   ["ANZ634","Little Creek to Cape Henry","Bay mouth and the tunnel",Z("ANZ634")]]],
+  ["Tide stations",[
+   ["8574680","Baltimore, Fort McHenry","",P("8574680")],
+   ["8575512","Annapolis","US Naval Academy",P("8575512")],
+   ["8571892","Cambridge","Choptank River",P("8571892")],
+   ["8577330","Solomons Island","Patuxent River",P("8577330")],
+   ["8638610","Sewells Point","Norfolk",P("8638610")],
+   ["8638863","Chesapeake Bay Bridge-Tunnel","Bay mouth",P("8638863")]]],
+  ["NOAA Weather Radio",[
+   ["WX2","Baltimore · KEC83","162.400 MHz · upper and mid bay",null],
+   ["WX6","Sudlersville · Eastern Shore","162.500 MHz · Kent and Queen Anne's",null],
+   ["WX5","Washington DC · WNG736","162.450 MHz",null],
+   ["WX1","Manassas · KHB36","162.550 MHz · DC area, Potomac",null],
+   ["WX3","Salisbury · KEC92","162.475 MHz · Delmarva",null],
+   ["WX2","Heathsville · WXM57","162.400 MHz · Northern Neck, Middle Peninsula",null],
+   ["WX1","Driver · KHB37","162.550 MHz · Hampton Roads",null]]]]},
+ {id:"newengland",name:"New England",sub:"Gulf of Maine, Cape Cod and the Islands.",groups:[
+  ["Buoys",[
+   ["44005","Gulf of Maine","78 NM east of Portsmouth",B("44005")],
+   ["44013","Boston","16 NM east of Boston",B("44013")],
+   ["44008","Nantucket","54 NM southeast",B("44008")],
+   ["44011","Georges Bank","170 NM east of Hyannis",B("44011")]]],
+  ["Offshore forecast",[
+   ["NT1","New England offshore waters","OPC text forecast",OFF("NT1")]]],
+  ["Tide stations",[
+   ["8418150","Portland, ME","",P("8418150")],
+   ["8443970","Boston","",P("8443970")],
+   ["8447930","Woods Hole","",P("8447930")],
+   ["8449130","Nantucket Island","",P("8449130")],
+   ["8452660","Newport, RI","",P("8452660")]]],
+  ["NOAA Weather Radio",[
+   ["WX3","Boston · Blue Hill","162.475 MHz",null],
+   ["WX1","Hyannis · Camp Edwards","162.550 MHz · Cape Cod and Islands",null],
+   ["WX2","Providence · Johnston","162.400 MHz · Narragansett Bay",null]]]]},
+ {id:"longisland",name:"Long Island Sound & NY",sub:"The Sound, Hell Gate approaches and the south shore.",groups:[
+  ["Buoys",[
+   ["44040","Western Long Island Sound","Off Execution Rocks area",B("44040")],
+   ["44039","Central Long Island Sound","",B("44039")],
+   ["44017","Montauk Point","23 NM SSW of Montauk",B("44017")],
+   ["44025","Long Island","30 NM south of Islip",B("44025")],
+   ["44065","New York Harbor Entrance","15 NM SE of Breezy Point",B("44065")]]],
+  ["Forecast zones",[
+   ["ANZ335","Long Island Sound, west","West of New Haven / Port Jefferson",Z("ANZ335")],
+   ["ANZ330","Long Island Sound, east","East of New Haven / Port Jefferson",Z("ANZ330")],
+   ["ANZ345","Peconic and Gardiners Bays","",Z("ANZ345")],
+   ["ANZ338","New York Harbor","Includes the East River approaches",Z("ANZ338")],
+   ["ANZ350","Moriches Inlet to Montauk","Out 20 NM",Z("ANZ350")],
+   ["ANZ355","Sandy Hook to Fire Island","Out 20 NM",Z("ANZ355")]]],
+  ["Tide stations",[
+   ["8518750","The Battery","New York Harbor",P("8518750")],
+   ["8516945","Kings Point","Western Sound, near Hell Gate",P("8516945")],
+   ["8467150","Bridgeport","",P("8467150")],
+   ["8461490","New London","",P("8461490")],
+   ["8510560","Montauk","",P("8510560")]]],
+  ["NOAA Weather Radio",[
+   ["WX1","New York City · KWO35","162.550 MHz · harbor and western Sound",null],
+   ["WX3","Riverhead · WXM80","162.475 MHz · eastern Long Island",null],
+   ["WX2","Meriden · WXJ42","162.400 MHz · central CT shore",null],
+   ["WX1","Montville · KHB47","162.550 MHz · eastern CT shore",null]]]]},
+ {id:"midatlantic",name:"NJ, Delaware & Virginia Coast",sub:"Outside run from Sandy Hook to Cape Henry.",groups:[
+  ["Buoys",[
+   ["44009","Delaware Bay","26 NM SE of Cape May",B("44009")],
+   ["44099","Cape Henry","Waverider off the bay mouth",B("44099")],
+   ["44014","Virginia Beach","64 NM east",B("44014")]]],
+  ["Forecast zones",[
+   ["ANZ450","Sandy Hook to Manasquan","Out 20 NM",Z("ANZ450")],
+   ["ANZ431","Lower Delaware Bay","",Z("ANZ431")],
+   ["ANZ454","Cape May to Cape Henlopen","Out 20 NM",Z("ANZ454")],
+   ["ANZ455","Cape Henlopen to Fenwick Island","Out 20 NM",Z("ANZ455")],
+   ["ANZ650","Fenwick Island to Chincoteague","Out 20 NM",Z("ANZ650")],
+   ["ANZ656","Cape Charles Light to VA-NC line","Out 20 NM",Z("ANZ656")]]],
+  ["Offshore forecast",[
+   ["NT2","Mid-Atlantic offshore waters","OPC text forecast",OFF("NT2")]]],
+  ["Tide stations",[
+   ["8531680","Sandy Hook","",P("8531680")],
+   ["8534720","Atlantic City","",P("8534720")],
+   ["8536110","Cape May","",P("8536110")],
+   ["8557380","Lewes","",P("8557380")],
+   ["8570283","Ocean City Inlet","",P("8570283")],
+   ["8631044","Wachapreague","",P("8631044")]]],
+  ["NOAA Weather Radio",[
+   ["WX5","Howell Twp, NJ","162.450 MHz · northern Jersey Shore",null],
+   ["WX2","Atlantic City","162.400 MHz",null],
+   ["WX1","Lewes","162.550 MHz · Delaware Bay, beaches",null],
+   ["WX7","Accomack · KJY99","162.525 MHz · Chincoteague to Exmore",null]]]]},
+ {id:"hatteras",name:"Cape Hatteras & Carolinas",sub:"The hard corner. Watch the Gulf Stream wall.",groups:[
+  ["Buoys",[
+   ["41025","Diamond Shoals","16 NM east of Cape Hatteras",B("41025")],
+   ["41001","East Hatteras","150 NM east of Cape Hatteras",B("41001")],
+   ["41002","South Hatteras","225 NM south of Cape Hatteras",B("41002")],
+   ["41004","Edisto","41 NM SE of Charleston",B("41004")],
+   ["41008","Grays Reef","40 NM SE of Savannah",B("41008")]]],
+  ["Forecast zones",[
+   ["ANZ658","VA-NC line to Currituck Beach","Out 20 NM",Z("ANZ658")],
+   ["AMZ152","Oregon Inlet to Cape Hatteras","Out 20 NM",Z("AMZ152")],
+   ["AMZ154","Cape Hatteras to Ocracoke Inlet","Out 20 NM",Z("AMZ154")]]],
+  ["Tide stations",[
+   ["8651370","Duck","",P("8651370")],
+   ["8654467","Hatteras","",P("8654467")],
+   ["8656483","Beaufort, NC","",P("8656483")],
+   ["8658120","Wilmington","",P("8658120")],
+   ["8665530","Charleston","",P("8665530")],
+   ["8670870","Fort Pulaski","Savannah River entrance",P("8670870")]]],
+  ["NOAA Weather Radio",[
+   ["WX1","Driver · KHB37","162.550 MHz · northern Outer Banks",null],
+   ["WX3","Cape Hatteras · KIG77","162.475 MHz",null],
+   ["WX2","New Bern · KEC84","162.400 MHz · Pamlico Sound, Beaufort",null],
+   ["WX1","Wilmington · KHB31","162.550 MHz",null]]]]},
+ {id:"southeast",name:"Florida, Bahamas & Caribbean",sub:"Southbound deliveries and island crossings.",groups:[
+  ["Buoys",[
+   ["41009","Canaveral","20 NM east of Cape Canaveral",B("41009")],
+   ["41010","Canaveral East","120 NM east of Cape Canaveral",B("41010")],
+   ["41047","Northeast Bahamas","",B("41047")],
+   ["41046","East Bahamas","",B("41046")],
+   ["41043","NE Puerto Rico","170 NM NNE of San Juan",B("41043")]]],
+  ["Forecasts",[
+   ["NHC-MAR","NHC marine forecasts","SW Atlantic, Caribbean and Gulf offshore",'https://www.nhc.noaa.gov/marine/'],
+   ["NHC","Tropical outlook","Current storms and 7-day outlook",'https://www.nhc.noaa.gov/']]],
+  ["Tide stations",[
+   ["8720218","Mayport","St. Johns River entrance",P("8720218")],
+   ["8721604","Trident Pier","Port Canaveral",P("8721604")],
+   ["8722670","Lake Worth Pier","",P("8722670")],
+   ["8723214","Virginia Key","Miami",P("8723214")],
+   ["8724580","Key West","",P("8724580")],
+   ["9755371","San Juan","",P("9755371")]]],
+  ["NOAA Weather Radio",[
+   ["WX2","Daytona Beach · KIH26","162.400 MHz",null],
+   ["WX1","Melbourne · WXJ70","162.550 MHz · Space Coast",null],
+   ["WX4","Ft. Pierce · WWF69","162.425 MHz",null],
+   ["WX3","West Palm Beach · KEC50","162.475 MHz",null],
+   ["WX1","Miami · KHB34","162.550 MHz",null]]]]}
+];
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const isBuoy=u=>typeof u==='string'&&u.includes('station_page.php');
+const toast=msg=>{const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2200)};
+
+/* ---------- index every row ---------- */
+const ITEMS={};          // key -> {it,group,region}
+const keyOf=(r,id,nm)=>r+'|'+id+'|'+nm;
+DATA.forEach(r=>r.groups.forEach(([t,items])=>items.forEach(it=>{
+  ITEMS[keyOf(r.id,it[0],it[1])]={it,group:t,region:r,search:(it[0]+' '+it[1]+' '+it[2]+' '+t+' '+r.name).toLowerCase()};
+})));
+let favs=store.get('buoyboard.favs',[]).filter(k=>ITEMS[k]);
+
+/* ---------- live data (NDBC latest observations) ---------- */
+let OBS=store.get('buoyboard.obs',null);   // {fetched, stations:{ID:{...}}}
+const SOURCES=['ndbc/latest_obs.txt','https://www.ndbc.noaa.gov/data/latest_obs/latest_obs.txt'];
+const CARD=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+const card=d=>d==null?'':CARD[Math.round(d/22.5)%16];
+function parseObs(txt){
+  const lines=txt.split(/\r?\n/).filter(Boolean);
+  const head=lines[0].replace(/^#/,'').trim().split(/\s+/);
+  const units=(lines[1]||'').replace(/^#/,'').trim().split(/\s+/);
+  const out={};
+  for(const ln of lines){
+    if(ln.startsWith('#'))continue;
+    const v=ln.trim().split(/\s+/);if(v.length<8)continue;
+    const row={};head.forEach((h,i)=>{if(!(h in row))row[h]={v:v[i],u:units[i]}});
+    const n=h=>{const c=row[h];if(!c||c.v==null||c.v==='MM')return null;const x=parseFloat(c.v);return isNaN(x)?null:x};
+    const u=h=>(row[h]&&row[h].u)||'';
+    const kt=(x,un)=>x==null?null:(/m\/s/i.test(un)?x*1.943844:x);
+    const ft=(x,un)=>x==null?null:(/^m$/i.test(un)?x*3.28084:x);
+    const f=(x,un)=>x==null?null:(/degC/i.test(un)?x*9/5+32:x);
+    const hpa=(x,un)=>x==null?null:(/in/i.test(un)?x*33.8639:x);
+    const yr=row.YYYY?row.YYYY.v:row.YY?row.YY.v:null;
+    const t=yr?Date.UTC(+yr,+row.MM.v-1,+row.DD.v,+row.hh.v,+(row.mm?row.mm.v:0)):null;
+    out[v[0].toUpperCase()]={t,wdir:n('WDIR'),wspd:kt(n('WSPD'),u('WSPD')),gst:kt(n('GST'),u('GST')),
+      wvht:ft(n('WVHT'),u('WVHT')),dpd:n('DPD'),mwd:n('MWD'),pres:hpa(n('PRES'),u('PRES')),ptdy:hpa(n('PTDY'),u('PTDY')),
+      atmp:f(n('ATMP'),u('ATMP')),wtmp:f(n('WTMP'),u('WTMP'))};
+  }
+  return out;
+}
+let loading=false;
+async function loadObs(force){
+  if(loading)return;
+  if(!force&&OBS&&Date.now()-OBS.fetched<10*60e3){render();return}
+  loading=true;$('#refresh').textContent='↻ Updating…';
+  let ok=false;
+  for(const src of SOURCES){
+    try{
+      const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),15000);
+      const r=await fetch(src+(src.startsWith('http')?'':'?t='+Math.floor(Date.now()/60e3)),{signal:ctl.signal,cache:'no-store'});
+      clearTimeout(to);
+      if(!r.ok)continue;
+      const txt=await r.text();if(!/^#\s*STN/i.test(txt.trim()))continue;
+      const st=parseObs(txt);if(!Object.keys(st).length)continue;
+      const keep={};favs.forEach(k=>{const id=ITEMS[k].it[0].toUpperCase();if(st[id])keep[id]=st[id]});
+      OBS={fetched:Date.now(),stations:st};
+      store.set('buoyboard.obs',{fetched:OBS.fetched,stations:keep}); // only pinned stations kept on the phone
+      ok=true;break;
+    }catch(e){}
+  }
+  loading=false;$('#refresh').textContent='↻ Refresh';
+  $('#offline').hidden=ok;
+  if(!ok)$('#offline-msg').textContent=navigator.onLine?"Couldn't reach NOAA just now. Showing the last readings saved on this phone.":'No signal. Showing the last readings saved on this phone.';
+  render();
+}
+const ago=t=>{if(!t)return'';const m=Math.round((Date.now()-t)/60e3);if(m<1)return'just now';if(m<60)return m+' min ago';const h=Math.floor(m/60);if(h<48)return h+' hr ago';return Math.floor(h/24)+' days ago'};
+const local=t=>t?new Date(t).toLocaleString([], {weekday:'short',hour:'numeric',minute:'2-digit'}):'';
+const r0=x=>Math.round(x),r1=x=>Math.round(x*10)/10;
+function fmt(o){
+  return {
+    wind:o.wspd!=null?`${card(o.wdir)} ${r0(o.wspd)}`:null, windSub:o.wspd!=null?(o.gst!=null?`kt, gusts ${r0(o.gst)}`:'kt'):'',
+    wave:o.wvht!=null?`${r1(o.wvht)} ft`:null, waveSub:o.wvht!=null?(o.dpd!=null?`@ ${r0(o.dpd)} s${o.mwd!=null?' from '+card(o.mwd):''}`:''):'',
+    pres:o.pres!=null?`${r1(o.pres)}`:null, presSub:o.pres!=null?`hPa · ${(o.pres/33.8639).toFixed(2)} in${o.ptdy!=null?(o.ptdy>0.3?' ↑':o.ptdy<-0.3?' ↓':' →'):''}`:'',
+    wtmp:o.wtmp!=null?`${r0(o.wtmp)}°F`:null, atmp:o.atmp!=null?`${r0(o.atmp)}°F`:null
+  };
+}
+function obsBlock(o,big){
+  if(!o)return `<p class="nodata">No recent report from this station.</p>`;
+  const f=fmt(o),cells=[];
+  if(f.wind)cells.push(`<div class="ob"><span>Wind</span><b>${f.wind}</b><small>${f.windSub}</small></div>`);
+  if(f.wave)cells.push(`<div class="ob"><span>Waves</span><b>${f.wave}</b><small>${f.waveSub}</small></div>`);
+  if(f.pres&&(big||cells.length<3))cells.push(`<div class="ob"><span>Pressure</span><b>${f.pres}</b><small>${f.presSub}</small></div>`);
+  if(f.wtmp&&(big||cells.length<3))cells.push(`<div class="ob"><span>Water</span><b>${f.wtmp}</b><small>${f.atmp?'air '+f.atmp:''}</small></div>`);
+  if(big&&f.atmp&&!f.wtmp)cells.push(`<div class="ob"><span>Air</span><b>${f.atmp}</b><small></small></div>`);
+  if(!cells.length)return `<p class="nodata">This station isn't reporting wind, waves or pressure right now.</p>`;
+  return `<div class="obs">${cells.join('')}</div>`;
+}
+const obsFor=id=>OBS&&OBS.stations?OBS.stations[String(id).toUpperCase()]:null;
+const stale=o=>o&&o.t&&Date.now()-o.t>3*3600e3;
+
+/* ---------- rows ---------- */
+function rowHTML(k,search){
+  const {it}=ITEMS[k];const [id,nm,nt,u]=it;const on=favs.includes(k);
+  const inner=`<span class="id">${esc(id)}</span><span class="nm">${esc(nm)}${nt?`<span class="nt">${esc(nt)}</span>`:''}</span>`;
+  const main=isBuoy(u)?`<button class="r" type="button" data-open="${esc(k)}">${inner}</button>`
+    :u?`<a class="r" href="${u}" target="_blank" rel="noopener">${inner}</a>`:`<div class="r">${inner}</div>`;
+  return `<li data-k="${esc(search??ITEMS[k].search)}">${main}<button class="star" type="button" data-fav="${esc(k)}" aria-pressed="${on}" aria-label="${on?'Remove from':'Add to'} My Stations">${on?'★':'☆'}</button></li>`;
+}
+const listHTML=keys=>`<ul class="rows">${keys.map(k=>rowHTML(k)).join('')}</ul>`;
+
+/* ---------- screens ---------- */
+function buildStations(){
+  let chips='',html='';
+  DATA.forEach(r=>{
+    const groups=r.groups.filter(([t])=>!/Tide|Radio/i.test(t));
+    if(!groups.length)return;
+    const n=groups.reduce((a,g)=>a+g[1].length,0);
+    chips+=`<a href="#${r.id}">${esc(r.name)}</a>`;
+    html+=`<section id="${r.id}"><h2>${esc(r.name)} <span class="ct">${n}</span></h2><p class="sub">${esc(r.sub)}</p>`;
+    groups.forEach(([t,items])=>{if(t)html+=`<h3>${esc(t)}</h3>`;html+=listHTML(items.map(it=>keyOf(r.id,it[0],it[1])))});
+    html+='</section>';
+  });
+  $('#chips').innerHTML=chips;$('#list').innerHTML=html;
+}
+function buildByGroup(re,el){
+  let html='';
+  DATA.forEach(r=>r.groups.forEach(([t,items])=>{
+    if(!re.test(t)||r.id==='core')return;
+    html+=`<section><h2>${esc(r.name)}</h2>${listHTML(items.map(it=>keyOf(r.id,it[0],it[1])))}</section>`;
+  }));
+  el.innerHTML=html;
+}
+function buildRadio(){
+  buildByGroup(/Radio/i,$('#radio'));
+  const ch=DATA[0].groups.find(([t])=>/channels/i.test(t));
+  if(ch)$('#radio').insertAdjacentHTML('afterbegin',`<section><h2>WX channels</h2><table class="ch">${ch[1].map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</table></section>`);
+}
+function renderMine(){
+  const buoys=favs.filter(k=>isBuoy(ITEMS[k].it[3]));
+  const others=favs.filter(k=>!isBuoy(ITEMS[k].it[3]));
+  $('#mine-lead').textContent=OBS&&OBS.fetched?`Live NOAA readings · updated ${ago(OBS.fetched)}`:'Live readings for the buoys you pin.';
+  if(!favs.length){
+    $('#mine-body').innerHTML=`<p class="hint" style="margin-top:16px">Tap ☆ next to any buoy, forecast zone or tide station to pin it here. Pinned buoys show live wind, waves, pressure and water temperature.</p>
+    <div class="actions"><button class="btn primary" type="button" data-tab="stations">Browse stations</button><button class="btn" type="button" id="sample">Pin a Chesapeake sample</button></div>`;
+    return;
+  }
+  let html='';
+  if(buoys.length){
+    html+=`<div class="cards" style="margin-top:14px">`+buoys.map(k=>{
+      const [id,nm]=ITEMS[k].it;const o=obsFor(id);
+      return `<button class="card" type="button" data-open="${esc(k)}"><div class="card-top"><span class="card-name"><span class="id">${esc(id)}</span> ${esc(nm)}</span><span class="age${stale(o)?' stale':''}">${o?ago(o.t):''}</span></div>${obsBlock(o,false)}</button>`;
+    }).join('')+`</div>`;
+  }
+  if(others.length)html+=`<section class="other"><h3>Pinned zones and tides</h3>${listHTML(others)}</section>`;
+  $('#mine-body').innerHTML=html;
+}
+function renderDetail(k){
+  const I=ITEMS[k];if(!I){show('mine');return}
+  const [id,nm,nt,u]=I.it,r=I.region,o=obsFor(id),on=favs.includes(k);
+  const zones=r.groups.filter(([t])=>/Forecast|Offshore/i.test(t)).flatMap(([,items])=>items.map(it=>keyOf(r.id,it[0],it[1])));
+  const tides=r.groups.filter(([t])=>/Tide/i.test(t)).flatMap(([,items])=>items.map(it=>keyOf(r.id,it[0],it[1])));
+  $('#detail').innerHTML=`<button class="btn back" type="button" data-back>‹ Back</button>
+    <h1>${esc(nm)}</h1><p class="lead"><span class="id">${esc(id)}</span> · ${esc(nt||r.name)}</p>
+    <div class="big" style="margin-top:14px">
+      <div class="card-top" style="margin-bottom:10px"><span class="nodata">${o?'Observed '+local(o.t):''}</span><span class="age${stale(o)?' stale':''}">${o?ago(o.t):''}</span></div>
+      ${obsBlock(o,true)}
+    </div>
+    <div class="actions">
+      <button class="btn primary" type="button" data-fav="${esc(k)}" aria-pressed="${on}">${on?'★ Pinned':'☆ Pin to My Stations'}</button>
+      <button class="btn" type="button" data-share="${esc(k)}">Share</button>
+      <a class="btn" href="${u}" target="_blank" rel="noopener">NOAA station page ↗</a>
+    </div>
+    ${zones.length?`<section><h3>Forecasts for ${esc(r.name)}</h3>${listHTML(zones)}</section>`:''}
+    ${tides.length?`<section><h3>Tide stations</h3>${listHTML(tides)}</section>`:''}`;
+}
+
+let current='mine';
+function show(tab,opts={}){
+  current=tab;
+  document.querySelectorAll('.screen').forEach(s=>s.hidden=s.id!=='s-'+tab);
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===tab||(tab==='detail'&&b.dataset.tab===opts.from)));
+  if(!opts.keepScroll)scrollTo(0,0);
+  store.set('buoyboard.tab',tab==='detail'?'mine':tab);
+}
+let detailFrom='mine';
+function openDetail(k){
+  detailFrom=current==='detail'?detailFrom:current;
+  renderDetail(k);show('detail',{from:detailFrom});
+  history.pushState({detail:k},'');
+}
+addEventListener('popstate',()=>{if(current==='detail'){show(detailFrom);render()}});
+function render(){renderMine();if(current==='detail'&&history.state&&history.state.detail)renderDetail(history.state.detail)}
+
+function syncStars(k){
+  document.querySelectorAll('[data-fav]').forEach(x=>{if(x.dataset.fav!==k)return;const on=favs.includes(k);x.setAttribute('aria-pressed',on);
+    if(x.classList.contains('star')){x.textContent=on?'★':'☆';x.setAttribute('aria-label',(on?'Remove from':'Add to')+' My Stations')}else x.textContent=on?'★ Pinned':'☆ Pin to My Stations'});
+}
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('button,a');if(!t)return;
+  if(t.dataset.tab){show(t.dataset.tab);if(t.dataset.tab==='mine')render();return}
+  if(t.dataset.fav!=null){const k=t.dataset.fav;const on=!favs.includes(k);favs=on?[...favs,k]:favs.filter(x=>x!==k);store.set('buoyboard.favs',favs);syncStars(k);renderMine();
+    toast(on?'Pinned to My Stations':'Removed from My Stations');if(on&&isBuoy(ITEMS[k].it[3])&&!obsFor(ITEMS[k].it[0]))loadObs(true);return}
+  if(t.dataset.open){openDetail(t.dataset.open);return}
+  if(t.dataset.back!=null){history.back();return}
+  if(t.id==='refresh'||t.id==='retry'){loadObs(true);return}
+  if(t.id==='sample'){favs=['chesapeake|TPLM2|Thomas Point Light','chesapeake|44063|Annapolis (CBIBS)','chesapeake|ANZ532|Sandy Point to North Beach','chesapeake|8575512|Annapolis'].filter(k=>ITEMS[k]);store.set('buoyboard.favs',favs);buildAll();loadObs(true);return}
+  if(t.dataset.share){const k=t.dataset.share,[id,nm,,u]=ITEMS[k].it,o=obsFor(id);let txt=`${nm} (${id})`;
+    if(o){const f=fmt(o);txt+=` at ${local(o.t)}: `+[f.wind&&`wind ${f.wind} ${f.windSub}`,f.wave&&`waves ${f.wave} ${f.waveSub}`,f.pres&&`${f.pres} hPa`,f.wtmp&&`water ${f.wtmp}`].filter(Boolean).join(', ')}
+    txt+=`\n${u}`;
+    try{if(navigator.share){await navigator.share({title:nm,text:txt});return}}catch(err){if(err&&err.name==='AbortError')return}
+    try{await navigator.clipboard.writeText(txt);toast('Copied to clipboard')}catch(err){toast('Sharing is not available here')}
+  }
+});
+
+/* search */
+const q=$('#q'),empty=$('#empty');
+q.addEventListener('input',()=>{
+  const v=q.value.trim().toLowerCase();let any=false;
+  document.querySelectorAll('#list section').forEach(s=>{let sh=false;
+    s.querySelectorAll('ul').forEach(ul=>{let uh=false;ul.querySelectorAll('li').forEach(li=>{const m=!v||li.dataset.k.includes(v);li.hidden=!m;if(m)uh=true});
+      ul.hidden=!uh;const h3=ul.previousElementSibling;if(h3&&h3.tagName==='H3')h3.hidden=!uh;if(uh)sh=true});
+    s.hidden=!sh;if(sh)any=true});
+  empty.hidden=any||!v;
+});
+
+function buildAll(){buildStations();buildByGroup(/Tide/i,$('#tides'));buildRadio();renderMine()}
+buildAll();
+show(store.get('buoyboard.tab',favs.length?'mine':'stations'));
+loadObs(false);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadObs(false)});
+addEventListener('online',()=>loadObs(true));
+setInterval(()=>{if(!document.hidden)renderMine()},60e3);
+if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>

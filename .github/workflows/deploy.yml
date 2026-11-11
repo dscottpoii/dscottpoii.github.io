@@ -1,0 +1,58 @@
+name: Publish Buoy Board
+
+# Runs when you change the app, every 15 minutes to refresh NOAA buoy data,
+# and on demand from the Actions tab.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Get the app files
+        uses: actions/checkout@v4
+
+      - name: Build the site folder
+        run: |
+          mkdir -p _site/ndbc _site/.well-known
+          cp -r index.html privacy.html manifest.webmanifest sw.js icons _site/
+          # Android app link file from PWABuilder, if you've added it
+          if [ -f assetlinks.json ]; then cp assetlinks.json _site/.well-known/assetlinks.json; fi
+          # Custom domain, if you've added one
+          if [ -f CNAME ]; then cp CNAME _site/; fi
+
+      - name: Download the latest NOAA buoy observations
+        run: |
+          for i in 1 2 3; do
+            if curl -fsSL --max-time 60 -o _site/ndbc/latest_obs.txt \
+                 https://www.ndbc.noaa.gov/data/latest_obs/latest_obs.txt \
+               && head -c 4 _site/ndbc/latest_obs.txt | grep -q '#STN'; then
+              echo "Got $(wc -l < _site/ndbc/latest_obs.txt) lines from NDBC"; exit 0
+            fi
+            echo "NDBC attempt $i failed, retrying"; sleep 20
+          done
+          echo "::warning::Could not reach NDBC; publishing without fresh buoy data"
+          rm -f _site/ndbc/latest_obs.txt
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
